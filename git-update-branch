@@ -98,9 +98,9 @@ git_upd_report_branches_and_strategy(){
     git_upd_report_info "STRATEGY: $GIT_UPD_STRATEGY"
     echo
     git_upd_report_info "BRANCHES"
-    git_upd_report_info " - ORIGINAL BRANCH:     $(tput setaf 15)$GIT_UPD_ORIGINAL_BRANCH"
-    git_upd_report_info " - DESTINATION BRANCH:  $(tput setaf 15)$GIT_UPD_DST_BRANCH"
-    git_upd_report_info " - SOURCE BRANCH:       $(tput setaf 15)$GIT_UPD_SRC_BRANCH"
+    git_upd_report_info " -- ORIGINAL BRANCH:     $(tput setaf 15)$GIT_UPD_ORIGINAL_BRANCH"
+    git_upd_report_info " ,- SOURCE BRANCH:       $(tput setaf 15)$GIT_UPD_SRC_BRANCH"
+    git_upd_report_info " \`> DESTINATION BRANCH:  $(tput setaf 15)$GIT_UPD_DST_BRANCH"
     echo
 }
 
