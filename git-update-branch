@@ -298,33 +298,41 @@ git_upd_continue(){
         GIT_UPD_SRC_BRANCH=${a[4]}
         GIT_UPD_STASH_DIFF=${a[5]}
         git_upd_report_info 'CONTEXT OF SAVED STATE:'
-        git_upd_report_info " - STRATEGY:         $GIT_UPD_STRATEGY"
-        git_upd_report_info " - CURRENT BRANCH:   $GIT_UPD_CURRENT_BRANCH"
-        git_upd_report_info " - BEANCH TO BRANCH: $GIT_UPD_DST_BRANCH"
-        git_upd_report_info " - FROM BRANCH:      $GIT_UPD_SRC_BRANCH"
+        git_upd_report_info " -- STRATEGY:           $(tput setaf 15)$GIT_UPD_STRATEGY"
+        git_upd_report_info " -- CURRENT BRANCH:     $(tput setaf 15)$GIT_UPD_CURRENT_BRANCH"
+        git_upd_report_info " ,- SOURCE BRANCH:      $(tput setaf 15)$GIT_UPD_SRC_BRANCH"
+        git_upd_report_info " \`> DESTINATION BRANCH: $(tput setaf 15)$GIT_UPD_DST_BRANCH"
         echo
 
         git_upd_report_info 'IMPORTANT:'
-        git_upd_report_info " - ORIGINAL BRANCH: $GIT_UPD_ORIGINAL_BRANCH"
-        git_upd_report_info " - STASH DIFF:      $GIT_UPD_STASH_DIFF"
+        git_upd_report_info " - ORIGINAL BRANCH: $(tput setaf 15)$GIT_UPD_ORIGINAL_BRANCH"
+        git_upd_report_info " - STASH DIFF:      $(tput setaf 15)$GIT_UPD_STASH_DIFF"
         echo
 
         local -r commit_editmsg=$GIT_UPD_DOTGIT/COMMIT_EDITMSG
-        git_upd_report_info "CONTENTS OF $commit_editmsg"
-        git_upd_report_info '---'
-        cat $commit_editmsg
-        git_upd_report_info '---'
+        if [ -e $commit_editmsg ]; then
+            local -r to_commit = true
+            git_upd_report_info "CONTENTS OF $commit_editmsg"
+            git_upd_report_info '---'
+            cat $commit_editmsg
+            git_upd_report_info '---'
+        else
+            local -r to_commit = false
+            git_upd_report_info "Didn't find the COMMIT_EDITMSG file. Assuming merge commit is already made."
+        fi
         echo
 
-        [ $GIT_UPD_STASH_DIFF -ne 0 ] &&
-            git_upd_report_info "stash diff of value $GIT_UPD_STASH_DIFF means stash is going to be popped to the '$GIT_UPD_ORIGINAL_BRANCH' branch" ||
-                git_upd_report_info "stash diff is $GIT_UPD_STASH_DIFF, so script is just going to checkout the '$GIT_UPD_ORIGINAL_BRANCH' branch"
+        if [ $GIT_UPD_STASH_DIFF -ne 0 ]; then
+            git_upd_report_info "Stash diff of value $GIT_UPD_STASH_DIFF means stash is going to be popped to the '$GIT_UPD_ORIGINAL_BRANCH' branch"
+        else
+            git_upd_report_info "Stash diff is $GIT_UPD_STASH_DIFF, so script is just going to checkout the '$GIT_UPD_ORIGINAL_BRANCH' branch"
+        fi
         echo
 
         while true; do
-            git_upd_report_info "do you want to continue updating after you have resolved the conflict? (y/n)"
+            git_upd_report_info "Do you want to continue updating after you have resolved the conflict? (y/n)"
             local yn
-            read -p "$GIT_UPD_LOG_PREFIX $(tput setaf $GIT_UPD_LOG_INFO_COLOR)> " yn
+            read -p "> " yn
             tput sgr0
             echo
 
@@ -332,9 +340,11 @@ git_upd_continue(){
                 y|yes)
                     git_upd_report_info "CONTINUING"
                     echo
-                    git_upd_commit &&
+                    to_commit && git_upd_commit || $(exit 0)
+                    if [ $? -eq 0 ]; then
                         git_upd_goto_original_branch &&
-                        git_upd_stash_pop
+                            git_upd_stash_pop
+                    fi
 
                     git_upd_finish
 
