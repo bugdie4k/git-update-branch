@@ -36,8 +36,8 @@ declare -ir GIT_UPD_LOG_FAIL_COLOR=1
 declare -ir GIT_UPD_LOG_INFO_COLOR=5
 
 # save state file
-declare -r GIT_UPD_DOTGIT=$(git rev-parse --show-toplevel)
-declare -r GIT_UPD_SAVE_STATE_FILE=$GIT_UPD_DOTGIT/.git/.git-update-branch
+declare -r GIT_UPD_DOTGIT=$(git rev-parse --show-toplevel)/.git
+declare -r GIT_UPD_SAVE_STATE_FILE=$GIT_UPD_DOTGIT/.git-update-branch
 
 # defaults for usage in 'git_upd_help'
 declare -r GIT_UPD_STRATEGY_DEFAULT=merge
@@ -211,7 +211,7 @@ git_upd_stash_pop(){
     git_upd_report_end $stage_name
 }
 
-git_upd_report_failureed_stages(){
+git_upd_report_failed_stages(){
     # local -r stage_name="git_upd_report failed stages"
     # git_upd_report_beg $stage_name
 
@@ -275,7 +275,7 @@ git_upd_help(){
 }
 
 git_upd_finish(){
-    git_upd_report_failureed_stages
+    git_upd_report_failed_stages
     git_upd_report_status
 }
 
@@ -297,7 +297,7 @@ git_upd_continue(){
         GIT_UPD_DST_BRANCH=${a[3]}
         GIT_UPD_SRC_BRANCH=${a[4]}
         GIT_UPD_STASH_DIFF=${a[5]}
-        git_upd_report_info 'CONTEXT OF SAVED STATE:'
+        git_upd_report_info 'SAVED STATE:'
         git_upd_report_info " -- STRATEGY:           $(tput setaf 15)$GIT_UPD_STRATEGY"
         git_upd_report_info " -- CURRENT BRANCH:     $(tput setaf 15)$GIT_UPD_CURRENT_BRANCH"
         git_upd_report_info " ,- SOURCE BRANCH:      $(tput setaf 15)$GIT_UPD_SRC_BRANCH"
@@ -311,13 +311,13 @@ git_upd_continue(){
 
         local -r commit_editmsg=$GIT_UPD_DOTGIT/COMMIT_EDITMSG
         if [ -e $commit_editmsg ]; then
-            local -r to_commit = true
+            local -r to_commit=true
             git_upd_report_info "CONTENTS OF $commit_editmsg"
             git_upd_report_info '---'
             cat $commit_editmsg
             git_upd_report_info '---'
         else
-            local -r to_commit = false
+            local -r to_commit=false
             git_upd_report_info "Didn't find the COMMIT_EDITMSG file. Assuming merge commit is already made."
         fi
         echo
@@ -330,7 +330,12 @@ git_upd_continue(){
         echo
 
         while true; do
-            git_upd_report_info "Do you want to continue updating after you have resolved the conflict? (y/n)"
+            if $to_commit; then
+                git_upd_report_info "Continue updating after you have resolved the conflict? (y/n)"
+            else
+                git_upd_report_info "Continue updating after you have resolved the conflict and commited? (y/n)"
+            fi
+
             local yn
             read -p "> " yn
             tput sgr0
@@ -340,12 +345,12 @@ git_upd_continue(){
                 y|yes)
                     git_upd_report_info "CONTINUING"
                     echo
-                    to_commit && git_upd_commit || $(exit 0)
+                    $to_commit && git_upd_commit || $(exit 0)
                     if [ $? -eq 0 ]; then
                         git_upd_goto_original_branch &&
                             git_upd_stash_pop
                     fi
-
+3
                     git_upd_finish
 
                     rm $GIT_UPD_SAVE_STATE_FILE
@@ -356,7 +361,7 @@ git_upd_continue(){
                     break
                     ;;
                 *)
-                    git_upd_report_info "cmon, give me YES or NO"
+                    git_upd_report_info "cmon, give me YES or NO, not that hard"
                     echo
                     ;;
             esac
@@ -392,6 +397,33 @@ git_upd_handler__goto_dst_branch(){
 
 git_upd_handler__merge_or_rebase(){
     git_upd_finish
+    echo
+    while true; do
+        git_upd_report_info 'Fire mergetool? (y/n)'
+
+        local yn
+        read -p '> ' yn
+        tput sgr0
+        echo
+
+        case ${yn,,} in
+            y|yes)
+                git mergetool
+                echo
+                GIT_UPD_FAILED_STAGES_COUNT=0
+                GIT_UPD_FAILED_STAGES=()
+                git_upd_continue
+                break
+                ;;
+            n|no)
+                break
+                ;;
+            *)
+                git_upd_report_info "cmon, give me YES or NO, not that hard"
+                echo
+                ;;
+        esac
+    done
 }
 
 git_update_branch(){
