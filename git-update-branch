@@ -109,7 +109,7 @@ git_upd_stash_save(){
     git_upd_report_beg $stage_name
 
     local -ri stash_before=$(git stash list | wc -l) &&
-        git stash save "${GIT_UPD_SCRIPT_NAME}: tmp stash save on $(date +'%d.%m.%y %H:%M:%S')" &&
+        git stash save "${GIT_UPD_SCRIPT_NAME}: $(date +'%d.%m.%y %H:%M:%S'): $(git rev-parse --short HEAD): TMP STASH" &&
         local -ri stash_after=$(git stash list | wc -l) &&
         GIT_UPD_STASH_DIFF=$((stash_after - stash_before))
 
