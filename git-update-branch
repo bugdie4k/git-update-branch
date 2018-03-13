@@ -350,7 +350,7 @@ git_upd_continue(){
                         git_upd_goto_original_branch &&
                             git_upd_stash_pop
                     fi
-3
+
                     git_upd_finish
 
                     rm $GIT_UPD_SAVE_STATE_FILE
